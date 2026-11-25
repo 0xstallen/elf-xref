@@ -32,6 +32,10 @@ for arg in sys.argv[2:]:
     if off is None:
         print(f"0x{va:08x}  <fora do arquivo>")
         continue
-    end = data.index(b'\x00', off)
+    # Sem terminador ate o fim do arquivo o find devolve -1; sem esse guarda
+    # o slice vira data[off:-1] e imprime o arquivo inteiro.
+    end = data.find(b'\x00', off)
+    if end == -1:
+        end = min(off + 512, len(data))
     txt = data[off:end].decode('ascii', 'replace')
     print(f"0x{va:08x}  {txt}")

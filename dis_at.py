@@ -12,21 +12,22 @@ DEPOIS = int(sys.argv[4], 16) if len(sys.argv) > 4 else 0x80
 
 with open(SO, 'rb') as f:
     data = f.read()
-elf = ELFFile(open(SO, 'rb'))
+    elf = ELFFile(f)
+    segments = [(s['p_vaddr'], s['p_filesz'], s['p_offset'])
+                for s in elf.iter_segments() if s['p_type'] == 'PT_LOAD']
 
 
 def va_to_off(va):
-    for seg in elf.iter_segments():
-        if seg['p_type'] != 'PT_LOAD':
-            continue
-        v = seg['p_vaddr']
-        if v <= va < v + seg['p_filesz']:
-            return seg['p_offset'] + (va - v)
+    for v, size, off in segments:
+        if v <= va < v + size:
+            return off + (va - v)
     return None
 
 
 start_va = VA - ANTES
 off = va_to_off(start_va)
+if off is None:
+    raise SystemExit(f"0x{start_va:x} nao esta em nenhum segmento PT_LOAD")
 chunk = data[off:off + ANTES + DEPOIS]
 
 md = Cs(CS_ARCH_ARM64, CS_MODE_ARM)
